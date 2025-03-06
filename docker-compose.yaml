@@ -9,44 +9,46 @@ services:
     volumes:
       - mongodb_data:/data/db
     environment:
+      MONGO_INITDB_ROOT_USERNAME: mongo
+      MONGO_INITDB_ROOT_PASSWORD: mongo
       MONGO_INITDB_DATABASE: phishing-simulator
 
-  frontend:
-    build:
-      context: .
-      dockerfile: ./tools/docker/frontend.Dockerfile
-    container_name: phishing-simulator-frontend
-    ports:
-      - "3000:3000"
-    depends_on:
-      - phishing-simulation-service
-      - phishing-attempts-service
-
-  phishing-simulation-service:
-    build:
-      context: .
-      dockerfile: ./tools/docker/phishing-simulation-service.Dockerfile
-    container_name: phishing-simulation-service
-    ports:
-      - "3001:3001"
-    depends_on:
-      - mongodb
-    environment:
-      - MONGODB_URI=mongodb://mongodb:27017/phishing-simulator
-      - NODE_ENV=production
-
-  phishing-attempts-service:
-    build:
-      context: .
-      dockerfile: ./tools/docker/phishing-attempts-service.Dockerfile
-    container_name: phishing-attempts-service
-    ports:
-      - "3002:3002"
-    depends_on:
-      - mongodb
-    environment:
-      - MONGODB_URI=mongodb://mongodb:27017/phishing-simulator
-      - NODE_ENV=production
+#  frontend:
+#    build:
+#      context: .
+#      dockerfile: ./tools/docker/frontend.Dockerfile
+#    container_name: phishing-simulator-frontend
+#    ports:
+#      - "3000:3000"
+#    depends_on:
+#      - phishing-simulation-service
+#      - phishing-attempts-service
+#
+#  phishing-simulation-service:
+#    build:
+#      context: .
+#      dockerfile: ./tools/docker/phishing-simulation-service.Dockerfile
+#    container_name: phishing-simulation-service
+#    ports:
+#      - "3001:3001"
+#    depends_on:
+#      - mongodb
+#    environment:
+#      - MONGODB_URI=mongodb://mongodb:27017/phishing-simulator
+#      - NODE_ENV=production
+#
+#  phishing-attempts-service:
+#    build:
+#      context: .
+#      dockerfile: ./tools/docker/phishing-attempts-service.Dockerfile
+#    container_name: phishing-attempts-service
+#    ports:
+#      - "3002:3002"
+#    depends_on:
+#      - mongodb
+#    environment:
+#      - MONGODB_URI=mongodb://mongodb:27017/phishing-simulator
+#      - NODE_ENV=production
 
 volumes:
   mongodb_data:

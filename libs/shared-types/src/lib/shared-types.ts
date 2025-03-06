@@ -3,6 +3,8 @@ export interface PhishingAttempt {
   recipientEmail: string;
   emailContent: string;
   status: 'PENDING' | 'CLICKED' | 'FAILED';
+  clickedAt?: Date;
+  createdBy?: User;
   createdAt?: Date;
   updatedAt?: Date;
 }
