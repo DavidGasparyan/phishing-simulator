@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   mongodb:
     image: mongo:latest
@@ -15,7 +13,7 @@ services:
     networks:
       - phishing-network
     healthcheck:
-      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "--host", "localhost", "--port", "27017", "-u", "mongo", "-p", "mongo", "--authenticationDatabase", "admin", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -70,16 +68,16 @@ services:
       - MONGODB_PASSWORD=mongo
       - NODE_ENV=production
       - RABBITMQ_URL=amqp://rabbit:rabbit@rabbitmq:5672
-      - SIMULATION_PORT=3001
+      - PORT=3002
       - JWT_SECRET=shared_jwt_secret_key_for_development_only
-      - SMTP_HOST=smtp.ethereal.email
+      - SMTP_HOST=sandbox.smtp.mailtrap.io
       - SMTP_PORT=587
       - SMTP_SECURE=false
-      - SMTP_USER=${SMTP_USER}
-      - SMTP_PASS=${SMTP_PASS}
+      - SMTP_USER=88d75c5e3985c4
+      - SMTP_PASS=4a23f686330f1f
       - EMAIL_FROM=security@company.com
       - TRACKING_URL=http://localhost/api/simulation/phishing/track
-      - ENCRYPTION_KEY=32_character_long_hex_key_for_encryption
+      - ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
     networks:
       - phishing-network
     restart: unless-stopped
@@ -102,7 +100,7 @@ services:
       - MONGODB_PASSWORD=mongo
       - NODE_ENV=production
       - RABBITMQ_URL=amqp://rabbit:rabbit@rabbitmq:5672
-      - MANAGEMENT_PORT=3002
+      - PORT=3002
       - JWT_SECRET=shared_jwt_secret_key_for_development_only
     networks:
       - phishing-network

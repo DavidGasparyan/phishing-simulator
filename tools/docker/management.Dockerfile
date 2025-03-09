@@ -19,11 +19,21 @@ RUN yarn nx build phishing-attempts-service
 # Production stage
 FROM node:18-alpine
 
+# Install build dependencies
+RUN apk add --no-cache make gcc g++ python3
+
 WORKDIR /app
 
-# Copy built artifacts and production dependencies
+# Copy built artifacts
 COPY --from=build /app/dist/apps/phishing-attempts-service ./
-COPY --from=build /app/node_modules ./node_modules
+
+# Copy only package.json for production dependencies
+COPY --from=build /app/package.json ./
+
+# Install only production dependencies and rebuild bcrypt
+RUN yarn install --production --ignore-platform && \
+    yarn add bcrypt --ignore-platform --force && \
+    apk del make gcc g++ python3
 
 # Expose the port
 EXPOSE 3002
