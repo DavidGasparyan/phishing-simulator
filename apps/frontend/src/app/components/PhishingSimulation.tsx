@@ -1,56 +1,40 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { useCreatePhishingAttempt, useSendPhishingEmail } from '../services/phishing.service';
-import { PhishingAttempt } from '../models/phishing-attempt.model';
+import { useSendPhishingEmail } from '../services/phishing.service';
+import { toast } from 'react-toastify';
 
 const PhishingSimulationSchema = Yup.object().shape({
-  email: Yup.string()
+  recipientEmail: Yup.string()
     .email('Invalid email address')
     .required('Email is required'),
-  subject: Yup.string().required('Subject is required'),
-  content: Yup.string().required('Email content is required'),
+  emailTemplate: Yup.string()
+    .required('Email content is required')
+    .max(500, 'Email content must be less than 500 characters'),
 });
 
 const PhishingSimulation: React.FC = () => {
   const navigate = useNavigate();
-  const createAttemptMutation = useCreatePhishingAttempt();
   const sendEmailMutation = useSendPhishingEmail();
-  const [createdAttempt, setCreatedAttempt] = useState<PhishingAttempt | null>(null);
 
   const formik = useFormik({
     initialValues: {
-      email: '',
-      subject: '',
-      content: '',
+      recipientEmail: '',
+      emailTemplate: '',
     },
     validationSchema: PhishingSimulationSchema,
     onSubmit: async (values) => {
       try {
-        const attempt = await createAttemptMutation.mutateAsync(values);
-        setCreatedAttempt(attempt);
+        console.log('Sending phishing email with data:', values);
+        await sendEmailMutation.mutateAsync(values);
+        toast.success('Phishing email sent successfully');
+        navigate('/phishing-attempts');
       } catch (error) {
-        console.error('Error creating phishing attempt:', error);
+        console.error('Error sending phishing email:', error);
       }
     },
   });
-
-  const handleSendEmail = async () => {
-    if (!createdAttempt) return;
-
-    try {
-      await sendEmailMutation.mutateAsync(createdAttempt.id);
-      navigate('/phishing-attempts');
-    } catch (error) {
-      console.error('Error sending phishing email:', error);
-    }
-  };
-
-  const handleCancel = () => {
-    setCreatedAttempt(null);
-    formik.resetForm();
-  };
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -59,131 +43,71 @@ const PhishingSimulation: React.FC = () => {
       </h1>
 
       <div className="bg-white rounded-lg shadow-md p-6">
-        {!createdAttempt ? (
-          <>
-            <p className="text-gray-600 mb-4">
-              Create a phishing simulation by entering the target email and the email content.
+        <p className="text-gray-600 mb-4">
+          Create a phishing simulation by entering the target email and the email content.
+        </p>
+
+        <form onSubmit={formik.handleSubmit}>
+          <div className="mb-4">
+            <label htmlFor="recipientEmail" className="block text-sm font-medium text-gray-700 mb-1">
+              Target Email
+            </label>
+            <input
+              id="recipientEmail"
+              type="email"
+              className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                formik.touched.recipientEmail && formik.errors.recipientEmail
+                  ? 'border-red-500'
+                  : ''
+              }`}
+              placeholder="Enter target email"
+              {...formik.getFieldProps('recipientEmail')}
+            />
+            {formik.touched.recipientEmail && formik.errors.recipientEmail ? (
+              <div className="mt-1 text-red-500 text-sm">{formik.errors.recipientEmail}</div>
+            ) : null}
+          </div>
+
+          <div className="mb-6">
+            <label htmlFor="emailTemplate" className="block text-sm font-medium text-gray-700 mb-1">
+              Email Content
+            </label>
+            <textarea
+              id="emailTemplate"
+              rows={6}
+              className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                formik.touched.emailTemplate && formik.errors.emailTemplate
+                  ? 'border-red-500'
+                  : ''
+              }`}
+              placeholder="Enter email content with phishing link"
+              {...formik.getFieldProps('emailTemplate')}
+            ></textarea>
+            {formik.touched.emailTemplate && formik.errors.emailTemplate ? (
+              <div className="mt-1 text-red-500 text-sm">{formik.errors.emailTemplate}</div>
+            ) : null}
+            <p className="mt-2 text-sm text-gray-500">
+              Note: The system will automatically insert a phishing link into your content.
             </p>
+          </div>
 
-            <form onSubmit={formik.handleSubmit}>
-              <div className="mb-4">
-                <label htmlFor="email" className="form-label">
-                  Target Email
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  className={`form-input ${
-                    formik.touched.email && formik.errors.email
-                      ? 'border-red-500'
-                      : ''
-                  }`}
-                  placeholder="Enter target email"
-                  {...formik.getFieldProps('email')}
-                />
-                {formik.touched.email && formik.errors.email ? (
-                  <div className="mt-1 text-red-500 text-sm">{formik.errors.email}</div>
-                ) : null}
-              </div>
-
-              <div className="mb-4">
-                <label htmlFor="subject" className="form-label">
-                  Email Subject
-                </label>
-                <input
-                  id="subject"
-                  type="text"
-                  className={`form-input ${
-                    formik.touched.subject && formik.errors.subject
-                      ? 'border-red-500'
-                      : ''
-                  }`}
-                  placeholder="Enter email subject"
-                  {...formik.getFieldProps('subject')}
-                />
-                {formik.touched.subject && formik.errors.subject ? (
-                  <div className="mt-1 text-red-500 text-sm">{formik.errors.subject}</div>
-                ) : null}
-              </div>
-
-              <div className="mb-6">
-                <label htmlFor="content" className="form-label">
-                  Email Content
-                </label>
-                <textarea
-                  id="content"
-                  rows={6}
-                  className={`form-input ${
-                    formik.touched.content && formik.errors.content
-                      ? 'border-red-500'
-                      : ''
-                  }`}
-                  placeholder="Enter email content with phishing link"
-                  {...formik.getFieldProps('content')}
-                ></textarea>
-                {formik.touched.content && formik.errors.content ? (
-                  <div className="mt-1 text-red-500 text-sm">{formik.errors.content}</div>
-                ) : null}
-                <p className="mt-2 text-sm text-gray-500">
-                  Note: The system will automatically insert a phishing link into your content.
-                </p>
-              </div>
-
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={createAttemptMutation.isPending}
-                >
-                  {createAttemptMutation.isPending ? 'Creating...' : 'Create Simulation'}
-                </button>
-              </div>
-            </form>
-          </>
-        ) : (
-          <>
-            <div className="bg-blue-50 border border-blue-300 rounded-md p-4 mb-6">
-              <h3 className="text-lg font-medium text-blue-800 mb-2">Simulation Created</h3>
-              <p className="text-blue-700 mb-1">
-                <strong>Target Email:</strong> {createdAttempt.email}
-              </p>
-              <p className="text-blue-700 mb-1">
-                <strong>Subject:</strong> {createdAttempt.subject}
-              </p>
-              <p className="text-blue-700">
-                <strong>Status:</strong>{' '}
-                <span className="inline-block status-new">NEW</span>
-              </p>
-            </div>
-
-            <div className="border rounded-md p-4 mb-6">
-              <h4 className="font-medium mb-2">Email Preview</h4>
-              <div className="bg-gray-50 p-3 rounded border">
-                <p className="mb-1"><strong>To:</strong> {createdAttempt.email}</p>
-                <p className="mb-1"><strong>Subject:</strong> {createdAttempt.subject}</p>
-                <hr className="my-2" />
-                <div className="whitespace-pre-wrap">{createdAttempt.content}</div>
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-4">
-              <button
-                onClick={handleCancel}
-                className="btn btn-secondary"
-                disabled={sendEmailMutation.isPending}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSendEmail}
-                className="btn btn-primary"
-                disabled={sendEmailMutation.isPending}
-              >
-                {sendEmailMutation.isPending ? 'Sending...' : 'Send Phishing Email'}
-              </button>
-            </div>
-          </>
-        )}
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => navigate('/phishing-attempts')}
+              className="mr-3 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              disabled={sendEmailMutation.isPending}
+            >
+              {sendEmailMutation.isPending ? 'Sending...' : 'Send Phishing Email'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

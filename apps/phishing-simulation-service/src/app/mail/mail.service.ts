@@ -33,7 +33,7 @@ export class MailService {
 
   async sendPhishingEmail(options: SendPhishingEmailOptions): Promise<void> {
     try {
-      const trackingUrl = `${this.configService.get('APP_URL', 'http://localhost:3001')}/api/phishing/track/${options.trackingToken}`;
+      const trackingUrl = `${this.configService.get('APP_URL', 'http://localhost:3002')}/api/simulation/phishing/track/${options.trackingToken}`;
 
       const htmlTemplate = `
         <html>

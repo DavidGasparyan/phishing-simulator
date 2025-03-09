@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CreatePhishingAttemptDto, PhishingAttempt } from '@phishing-simulator/shared-types';
 import { MailService } from '../mail/mail.service';
+import { WebsocketGateway } from '../websocket/websocket.gateway';
 
 @Injectable()
 export class PhishingSimulationService {
@@ -11,6 +12,7 @@ export class PhishingSimulationService {
   constructor(
     @InjectModel('PhishingAttempt') private phishingAttemptModel: Model<PhishingAttempt>,
     private readonly mailService: MailService,
+    private readonly websocketGateway: WebsocketGateway,
   ) {}
 
   async createPhishingAttempt(
@@ -26,6 +28,10 @@ export class PhishingSimulationService {
         trackingToken,
       });
 
+      const savedAttempt = await phishingAttempt.save();
+
+      this.websocketGateway.notifyPhishingAttemptUpdate(savedAttempt);
+
       await this.mailService.sendPhishingEmail({
         to: createPhishingAttemptDto.recipientEmail,
         subject: 'Important Security Update',
@@ -33,7 +39,7 @@ export class PhishingSimulationService {
         emailTemplate: createPhishingAttemptDto.emailTemplate,
       });
 
-      return await phishingAttempt.save();
+      return savedAttempt;
     } catch (error) {
       this.logger.error('Failed to create phishing attempt', error);
       throw new BadRequestException('Could not create phishing attempt');
@@ -47,14 +53,20 @@ export class PhishingSimulationService {
       throw new BadRequestException('Invalid tracking token');
     }
 
+    const previousStatus = phishingAttempt.status;
     phishingAttempt.status = 'CLICKED';
     phishingAttempt.clickedAt = new Date();
 
-    return await phishingAttempt.save();
+    const updatedAttempt = await phishingAttempt.save();
+
+    this.websocketGateway.notifyPhishingAttemptUpdate(updatedAttempt);
+    this.websocketGateway.notifyPhishingAttemptStatusChange(updatedAttempt, previousStatus);
+
+    return updatedAttempt;
   }
 
   private generateTrackingToken(): string {
     return Math.random().toString(36).substring(2, 15) +
       Math.random().toString(36).substring(2, 15);
   }
-  }
+}

@@ -10,10 +10,11 @@ export interface PhishingAttempt {
   updatedAt: string;
   clickedAt?: string;
   sentAt?: string;
+  recipientEmail?: string;
+  emailContent?: string;
 }
 
 export interface CreatePhishingAttemptDto {
-  email: string;
-  subject?: string;
-  content?: string;
+  recipientEmail: string;
+  emailTemplate: string;
 }

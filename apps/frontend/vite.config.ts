@@ -10,6 +10,22 @@ export default defineConfig({
   server: {
     port: 4200,
     host: 'localhost',
+    proxy: {
+      '/api/management': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false, // if using https with invalid cert
+        ws: true, // proxy websockets
+        rewrite: (path) => path.replace(/^\/api\/management/, '/api/management')
+      },
+      '/api/simulation': {
+        target: 'http://localhost:3002',
+        changeOrigin: true,
+        secure: false, // if using https with invalid cert
+        ws: true, // proxy websockets
+        rewrite: (path) => path.replace(/^\/api\/simulation/, '/api/simulation')
+      }
+    },
   },
   preview: {
     port: 4300,

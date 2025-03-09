@@ -49,7 +49,6 @@ export class PhishingAttemptsService {
   }> {
     const skip = (page - 1) * limit;
 
-    // If user is not an admin, only show their own attempts
     const filter = user.role === 'ADMIN'
       ? {}
       : { createdBy: user.id };

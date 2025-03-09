@@ -1,65 +1,56 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
-import { PhishingAttempt, CreatePhishingAttemptDto } from '../models/phishing-attempt.model';
+import { PhishingAttempt } from '../models/phishing-attempt.model';
 import apiClient from './api-client';
 
 // API endpoints
-const MANAGEMENT_API = '/api/management/phishing-attempts';
-const SIMULATION_API = '/api/simulation/phishing';
+const MANAGEMENT_API = '/management/phishing-attempts';
+const SIMULATION_API = '/simulation/phishing';
+
+// API response types
+interface PhishingAttemptsResponse {
+  attempts: PhishingAttempt[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+// DTO type for sending phishing emails
+interface SendPhishingEmailDto {
+  recipientEmail: string;
+  emailTemplate: string;
+}
 
 // API functions
 const phishingApiService = {
-  getAll: async (): Promise<PhishingAttempt[]> => {
-    const { data } = await apiClient.get<PhishingAttempt[]>(MANAGEMENT_API);
-    return data;
+  getAll: async (): Promise<PhishingAttemptsResponse> => {
+    try {
+      const { data } = await apiClient.get<PhishingAttemptsResponse>(MANAGEMENT_API);
+      return data;
+    } catch (error: any) {
+      console.error('Error fetching phishing attempts:', error.response?.data || error.message);
+      throw error;
+    }
   },
 
-  getById: async (id: string): Promise<PhishingAttempt> => {
-    const { data } = await apiClient.get<PhishingAttempt>(`${MANAGEMENT_API}/${id}`);
-    return data;
-  },
-
-  create: async (attempt: CreatePhishingAttemptDto): Promise<PhishingAttempt> => {
-    const { data } = await apiClient.post<PhishingAttempt>(MANAGEMENT_API, attempt);
-    return data;
-  },
-
-  sendPhishingEmail: async (id: string): Promise<PhishingAttempt> => {
-    const { data } = await apiClient.post<PhishingAttempt>(`${SIMULATION_API}/send`, { id });
-    return data;
+  sendPhishingEmail: async (emailData: SendPhishingEmailDto): Promise<PhishingAttempt> => {
+    try {
+      console.log('Sending phishing email with data:', emailData);
+      const { data } = await apiClient.post<PhishingAttempt>(`${SIMULATION_API}/send`, emailData);
+      return data;
+    } catch (error: any) {
+      console.error('Error sending phishing email:', error.response?.data || error.message);
+      throw error;
+    }
   }
 };
 
 // React Query hooks
 export const usePhishingAttempts = (options = {}) => {
-  return useQuery({
+  return useQuery<PhishingAttemptsResponse>({
     queryKey: ['phishingAttempts'],
     queryFn: phishingApiService.getAll,
     ...options
-  });
-};
-
-export const usePhishingAttempt = (id: string, options = {}) => {
-  return useQuery({
-    queryKey: ['phishingAttempt', id],
-    queryFn: () => phishingApiService.getById(id),
-    enabled: !!id,
-    ...options
-  });
-};
-
-export const useCreatePhishingAttempt = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: phishingApiService.create,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['phishingAttempts'] });
-      toast.success('Phishing attempt created successfully');
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to create phishing attempt');
-    }
   });
 };
 
@@ -70,10 +61,21 @@ export const useSendPhishingEmail = () => {
     mutationFn: phishingApiService.sendPhishingEmail,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['phishingAttempts'] });
-      toast.success('Phishing email sent successfully');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to send phishing email');
+      console.error('Error response:', error.response?.data);
+      let errorMessage = 'Failed to send phishing email';
+
+      // Try to extract a more specific error message
+      if (error.response?.data?.message) {
+        if (Array.isArray(error.response.data.message)) {
+          errorMessage = error.response.data.message.join(', ');
+        } else {
+          errorMessage = error.response.data.message;
+        }
+      }
+
+      toast.error(errorMessage);
     }
   });
 };
