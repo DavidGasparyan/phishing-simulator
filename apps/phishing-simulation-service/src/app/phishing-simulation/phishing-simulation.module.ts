@@ -4,7 +4,7 @@ import { PhishingSimulationService } from './phishing-simulation.service';
 import { PhishingSimulationController } from './phishing-simulation.controller';
 import { PhishingAttemptSchema } from '../schemas/phishing-attempt.schema';
 import { MailModule } from '../mail/mail.module';
-import { WebsocketModule } from '../websocket/websocket.module';
+import { RabbitMQModule } from '../rabbitmq/rabbitmq.module';
 
 @Module({
   imports: [
@@ -12,7 +12,7 @@ import { WebsocketModule } from '../websocket/websocket.module';
       { name: 'PhishingAttempt', schema: PhishingAttemptSchema }
     ]),
     MailModule,
-    WebsocketModule,
+    RabbitMQModule,
   ],
   controllers: [PhishingSimulationController],
   providers: [PhishingSimulationService],

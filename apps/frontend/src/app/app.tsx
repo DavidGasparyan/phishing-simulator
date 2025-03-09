@@ -11,6 +11,7 @@ import PhishingSimulation from './components/PhishingSimulation';
 import PhishingAttemptsList from './components/PhishingAttemptsList';
 import ErrorBoundary from './components/ErrorBoundary';
 import { Suspense } from 'react';
+import SocketTest from './components/SocketTest';
 
 // Configure React Query with better error handling
 const queryClient = new QueryClient({
@@ -52,6 +53,16 @@ export function App() {
               <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+                <Route
+                  path="/socket-test"
+                  element={
+                    <PrivateRoute>
+                      <ErrorBoundary>
+                        <SocketTest />
+                      </ErrorBoundary>
+                    </PrivateRoute>
+                  }
+                />
                 <Route
                   path="/phishing-simulation"
                   element={

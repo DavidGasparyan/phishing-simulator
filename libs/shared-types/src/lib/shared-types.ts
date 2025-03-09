@@ -2,7 +2,9 @@ export interface PhishingAttempt {
   id?: string;
   recipientEmail: string;
   emailContent: string;
-  status: 'PENDING' | 'CLICKED' | 'FAILED';
+  status: 'PENDING' | 'SENT' | 'CLICKED' | 'FAILED';
+  trackingToken: string;
+  sentAt?: Date;
   clickedAt?: Date;
   createdBy?: User;
   createdAt?: Date;

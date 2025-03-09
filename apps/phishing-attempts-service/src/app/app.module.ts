@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { PhishingAttemptsModule } from './phishing-attempts/phishing-attempts.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { RabbitmqModule } from './rabbitmq/rabbitmq.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { MongooseModule } from '@nestjs/mongoose';
       }),
       inject: [ConfigService],
     }),
+    RabbitmqModule,
     PhishingAttemptsModule,
   ],
   controllers: [AppController],

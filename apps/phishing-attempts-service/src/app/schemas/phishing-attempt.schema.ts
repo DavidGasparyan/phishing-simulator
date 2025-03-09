@@ -1,7 +1,6 @@
 import * as mongoose from 'mongoose';
-import { PhishingAttempt } from '@phishing-simulator/shared-types';
 
-export const PhishingAttemptSchema = new mongoose.Schema<PhishingAttempt>({
+export const PhishingAttemptSchema = new mongoose.Schema({
   recipientEmail: {
     type: String,
     required: true,
@@ -11,21 +10,37 @@ export const PhishingAttemptSchema = new mongoose.Schema<PhishingAttempt>({
   emailContent: {
     type: String,
     required: true,
-    maxlength: 500,
   },
   status: {
     type: String,
-    enum: ['PENDING', 'CLICKED', 'FAILED'],
+    enum: ['PENDING', 'CLICKED', 'FAILED', 'SENT'],
     default: 'PENDING',
+  },
+  trackingToken: {
+    type: String,
+    required: false,
+    unique: false,
+  },
+  clickedAt: {
+    type: Date,
+    default: null,
+  },
+  sentAt: {
+    type: Date,
+    default: null,
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
   },
-  clickedAt: {
+  createdAt: {
     type: Date,
-    default: null,
+    default: Date.now,
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now,
   },
 }, {
   timestamps: true,
@@ -37,6 +52,4 @@ export const PhishingAttemptSchema = new mongoose.Schema<PhishingAttempt>({
   }
 });
 
-PhishingAttemptSchema.index({ recipientEmail: 1 });
-PhishingAttemptSchema.index({ status: 1 });
-PhishingAttemptSchema.index({ createdBy: 1 });
+PhishingAttemptSchema.index({ trackingToken: 1 }, { unique: true });

@@ -5,10 +5,6 @@ import * as Yup from 'yup';
 import { useRegister } from '../services/auth.service';
 
 const RegisterSchema = Yup.object().shape({
-  username: Yup.string()
-    .min(3, 'Username must be at least 3 characters')
-    .max(20, 'Username must be less than 20 characters')
-    .required('Username is required'),
   email: Yup.string()
     .email('Invalid email address')
     .required('Email is required'),
@@ -26,7 +22,6 @@ const Register: React.FC = () => {
 
   const formik = useFormik({
     initialValues: {
-      username: '',
       email: '',
       password: '',
       confirmPassword: '',
@@ -54,26 +49,6 @@ const Register: React.FC = () => {
           </h2>
 
           <form onSubmit={formik.handleSubmit}>
-            <div className="mb-4">
-              <label htmlFor="username" className="form-label">
-                Username
-              </label>
-              <input
-                id="username"
-                type="text"
-                className={`form-input ${
-                  formik.touched.username && formik.errors.username
-                    ? 'border-red-500'
-                    : ''
-                }`}
-                placeholder="Enter a username"
-                {...formik.getFieldProps('username')}
-              />
-              {formik.touched.username && formik.errors.username ? (
-                <div className="mt-1 text-red-500 text-sm">{formik.errors.username}</div>
-              ) : null}
-            </div>
-
             <div className="mb-4">
               <label htmlFor="email" className="form-label">
                 Email Address

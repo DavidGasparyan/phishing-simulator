@@ -16,38 +16,85 @@ const PhishingAttemptsList: React.FC = () => {
     refetch
   } = usePhishingAttempts();
 
-  const socketService = useSocketConnection();
-  const [socketConnected, setSocketConnected] = useState(false);
+  const socketConnection = useSocketConnection();
+  const [receivedUpdates, setReceivedUpdates] = useState<PhishingAttempt[]>([]);
 
-  // Check socket connection status periodically
+  // Subscribe to phishing updates
   useEffect(() => {
-    console.log('PhishingAttemptsList: Setting up socket connection');
+    console.log('Setting up socket subscription');
 
-    try {
-      // Subscribe to real-time updates when component mounts
-      socketService.subscribeToAttempts();
-      setSocketConnected(socketService.checkConnection());
+    // Subscribe after a small delay to ensure socket is ready
+    const subscribeTimer = setTimeout(() => {
+      socketConnection.subscribeToAttempts();
+    }, 1000);
 
-      // Check connection status periodically
-      const interval = setInterval(() => {
-        const connected = socketService.checkConnection();
-        setSocketConnected(connected);
-      }, 5000);
+    // Clean up on unmount
+    return () => {
+      clearTimeout(subscribeTimer);
+      socketConnection.unsubscribeFromAttempts();
+    };
+  }, [socketConnection]);
 
-      // Unsubscribe and clear interval when component unmounts
-      return () => {
-        console.log('PhishingAttemptsList: Cleaning up socket connection');
-        socketService.unsubscribeFromAttempts();
-        clearInterval(interval);
-      };
-    } catch (err) {
-      console.error('Socket error in PhishingAttemptsList:', err);
-      toast.error('Error connecting to real-time updates');
-      return;
-    }
-  }, [socketService]);
+  // Setup direct phishing attempt update handlers
+  useEffect(() => {
+    const socket = socketConnection.getSocket();
+    if (!socket) return;
 
-  // Show detailed error information
+    // Handle phishing attempt updates
+    const handleAttemptUpdate = (updatedAttempt: PhishingAttempt) => {
+      console.log('🔴 RECEIVED UPDATE:', updatedAttempt);
+
+      // Add to received updates list
+      setReceivedUpdates(prev => {
+        const exists = prev.some(a => a.id === updatedAttempt.id);
+        if (!exists) {
+          return [...prev, updatedAttempt];
+        }
+        return prev;
+      });
+
+      // Refresh data
+      refetch();
+
+      // Show notification
+      toast.info(`Phishing attempt updated: ${updatedAttempt.id}`);
+    };
+
+    // Handle status changes
+    const handleStatusChange = (data: {
+      phishingAttempt: PhishingAttempt;
+      previousStatus: string
+    }) => {
+      console.log('🔴 RECEIVED STATUS CHANGE:', data);
+
+      // Add to received updates list
+      setReceivedUpdates(prev => {
+        const exists = prev.some(a => a.id === data.phishingAttempt.id);
+        if (!exists) {
+          return [...prev, data.phishingAttempt];
+        }
+        return prev;
+      });
+
+      // Refresh data
+      refetch();
+
+      // Show notification
+      toast.info(`Status changed: ${data.previousStatus} → ${data.phishingAttempt.status}`);
+    };
+
+    // Add event listeners directly to socket
+    socket.on('phishingAttemptUpdated', handleAttemptUpdate);
+    socket.on('phishingAttemptStatusChanged', handleStatusChange);
+
+    // Remove event listeners on cleanup
+    return () => {
+      socket.off('phishingAttemptUpdated', handleAttemptUpdate);
+      socket.off('phishingAttemptStatusChanged', handleStatusChange);
+    };
+  }, [socketConnection, refetch]);
+
+  // Log errors
   useEffect(() => {
     if (isError && error) {
       console.error('Error fetching phishing attempts:', error);
@@ -84,9 +131,27 @@ const PhishingAttemptsList: React.FC = () => {
     }
   };
 
+  const renderReceivedUpdates = () => {
+    if (receivedUpdates.length === 0) return null;
+
+    return (
+      <div className="bg-yellow-50 p-4 rounded-md mb-4">
+        <h3 className="font-bold text-yellow-800 mb-2">Received WebSocket Updates</h3>
+        <ul>
+          {receivedUpdates.map(update => (
+            <li key={update.id} className="text-sm text-yellow-700">
+              Attempt {update.id} - Status: {update.status}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="max-w-6xl mx-auto">
+        {renderReceivedUpdates()}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800">Phishing Attempts</h1>
         </div>
@@ -101,14 +166,21 @@ const PhishingAttemptsList: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto">
+      {renderReceivedUpdates()}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Phishing Attempts</h1>
         <div className="flex items-center gap-4">
           {/* Socket connection status indicator */}
           <div className="flex items-center">
-            <div className={`w-3 h-3 rounded-full mr-2 ${socketConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            <div className={`w-3 h-3 rounded-full mr-2 ${socketConnection.connected
+              ? socketConnection.authenticated ? 'bg-green-500' : 'bg-yellow-500'
+              : 'bg-red-500'}`}></div>
             <span className="text-sm text-gray-600">
-              {socketConnected ? 'Real-time updates active' : 'Offline mode'}
+              {socketConnection.connected
+                ? socketConnection.authenticated
+                  ? 'Real-time updates active'
+                  : 'Connected (authenticating...)'
+                : 'Offline mode'}
             </span>
           </div>
 

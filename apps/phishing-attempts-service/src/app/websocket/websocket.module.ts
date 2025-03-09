@@ -4,7 +4,6 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PhishingAttemptSchema } from '../schemas/phishing-attempt.schema';
-import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -21,7 +20,6 @@ import { AuthModule } from '../auth/auth.module';
       }),
       inject: [ConfigService],
     }),
-    AuthModule,
   ],
   providers: [WebsocketGateway],
   exports: [WebsocketGateway],

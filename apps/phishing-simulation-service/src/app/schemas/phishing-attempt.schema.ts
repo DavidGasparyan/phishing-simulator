@@ -13,17 +13,25 @@ export const PhishingAttemptSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['PENDING', 'CLICKED', 'FAILED'],
+    enum: ['PENDING', 'CLICKED', 'FAILED', 'SENT'],
     default: 'PENDING',
   },
   trackingToken: {
     type: String,
-    required: true,
-    unique: true,
+    default: null,
   },
   clickedAt: {
     type: Date,
     default: null,
+  },
+  sentAt: {
+    type: Date,
+    default: null,
+  },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
   },
   createdAt: {
     type: Date,

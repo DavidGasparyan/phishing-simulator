@@ -12,43 +12,106 @@ services:
       MONGO_INITDB_ROOT_USERNAME: mongo
       MONGO_INITDB_ROOT_PASSWORD: mongo
       MONGO_INITDB_DATABASE: phishing-simulator
+    networks:
+      - phishing-network
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-#  frontend:
-#    build:
-#      context: .
-#      dockerfile: ./tools/docker/frontend.Dockerfile
-#    container_name: phishing-simulator-frontend
-#    ports:
-#      - "3000:3000"
-#    depends_on:
-#      - phishing-simulation-service
-#      - phishing-attempts-service
-#
-#  phishing-simulation-service:
-#    build:
-#      context: .
-#      dockerfile: ./tools/docker/phishing-simulation-service.Dockerfile
-#    container_name: phishing-simulation-service
-#    ports:
-#      - "3001:3001"
-#    depends_on:
-#      - mongodb
-#    environment:
-#      - MONGODB_URI=mongodb://mongodb:27017/phishing-simulator
-#      - NODE_ENV=production
-#
-#  phishing-attempts-service:
-#    build:
-#      context: .
-#      dockerfile: ./tools/docker/phishing-attempts-service.Dockerfile
-#    container_name: phishing-attempts-service
-#    ports:
-#      - "3002:3002"
-#    depends_on:
-#      - mongodb
-#    environment:
-#      - MONGODB_URI=mongodb://mongodb:27017/phishing-simulator
-#      - NODE_ENV=production
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: phishing-simulator-rabbitmq
+    ports:
+      - "5672:5672"    # AMQP protocol port
+      - "15672:15672"  # Management UI port
+    environment:
+      RABBITMQ_DEFAULT_USER: rabbit
+      RABBITMQ_DEFAULT_PASS: rabbit
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - phishing-network
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    build:
+      context: .
+      dockerfile: ./tools/docker/frontend.Dockerfile
+    container_name: phishing-simulator-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - phishing-simulation-service
+      - phishing-attempts-service
+    networks:
+      - phishing-network
+
+  phishing-simulation-service:
+    build:
+      context: .
+      dockerfile: ./tools/docker/simulation.Dockerfile
+    container_name: phishing-simulation-service
+    ports:
+      - "3001:3001"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - MONGODB_URI=mongodb://mongo:mongo@mongodb:27017/phishing-simulator?authSource=admin
+      - MONGODB_USERNAME=mongo
+      - MONGODB_PASSWORD=mongo
+      - NODE_ENV=production
+      - RABBITMQ_URL=amqp://rabbit:rabbit@rabbitmq:5672
+      - SIMULATION_PORT=3001
+      - JWT_SECRET=shared_jwt_secret_key_for_development_only
+      - SMTP_HOST=smtp.ethereal.email
+      - SMTP_PORT=587
+      - SMTP_SECURE=false
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - EMAIL_FROM=security@company.com
+      - TRACKING_URL=http://localhost/api/simulation/phishing/track
+      - ENCRYPTION_KEY=32_character_long_hex_key_for_encryption
+    networks:
+      - phishing-network
+    restart: unless-stopped
+
+  phishing-attempts-service:
+    build:
+      context: .
+      dockerfile: ./tools/docker/management.Dockerfile
+    container_name: phishing-attempts-service
+    ports:
+      - "3002:3002"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - MONGODB_URI=mongodb://mongo:mongo@mongodb:27017/phishing-simulator?authSource=admin
+      - MONGODB_USERNAME=mongo
+      - MONGODB_PASSWORD=mongo
+      - NODE_ENV=production
+      - RABBITMQ_URL=amqp://rabbit:rabbit@rabbitmq:5672
+      - MANAGEMENT_PORT=3002
+      - JWT_SECRET=shared_jwt_secret_key_for_development_only
+    networks:
+      - phishing-network
+    restart: unless-stopped
 
 volumes:
   mongodb_data:
+  rabbitmq_data:
+
+networks:
+  phishing-network:
+    driver: bridge

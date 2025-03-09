@@ -2,7 +2,6 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
 import { ConfigService } from '@nestjs/config';
-import { SocketIoAdapter } from './app/socket-io.adapter';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -24,14 +23,12 @@ async function bootstrap() {
   });
 
   app.setGlobalPrefix('api/simulation');
-  app.useWebSocketAdapter(new SocketIoAdapter(app));
 
   // const port = configService.get<number>('PORT', 3002);
   const port = 3002;
   await app.listen(port);
 
   logger.log(`Management Server is running on http://localhost:${port}`);
-  logger.log(`WebSocket server is available at path: /api/management/socket.io`);
 }
 
 bootstrap();

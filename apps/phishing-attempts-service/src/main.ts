@@ -8,11 +8,25 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
 import { ConfigService } from '@nestjs/config';
 import { SocketIoAdapter } from './app/socket-io.adapter';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
+
+  // Connect to RabbitMQ as a microservice
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.RMQ,
+    options: {
+      urls: [configService.get<string>('RABBITMQ_URL', 'amqp://rabbit:rabbit@localhost:5672')],
+      queue: 'phishing_events_queue',
+      queueOptions: {
+        durable: true,
+      },
+      noAck: false, // Enable manual acknowledgement
+    },
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -30,6 +44,8 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api/management');
   app.useWebSocketAdapter(new SocketIoAdapter(app));
+
+  await app.startAllMicroservices();
 
   const port = configService.get<number>('PORT', 3002);
   await app.listen(port);

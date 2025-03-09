@@ -5,8 +5,8 @@ import { ConfigService } from '@nestjs/config';
 interface SendPhishingEmailOptions {
   to: string;
   subject: string;
-  trackingToken: string;
-  emailTemplate: string;
+  from: string;
+  html: string;
 }
 
 @Injectable()
@@ -33,24 +33,11 @@ export class MailService {
 
   async sendPhishingEmail(options: SendPhishingEmailOptions): Promise<void> {
     try {
-      const trackingUrl = `${this.configService.get('APP_URL', 'http://localhost:3002')}/api/simulation/phishing/track/${options.trackingToken}`;
-
-      const htmlTemplate = `
-        <html>
-          <body>
-            <h1>Security Alert</h1>
-            <p>${options.emailTemplate}</p>
-            <p>Please verify your account by clicking the link below:</p>
-            <a href="${trackingUrl}">Verify Account</a>
-          </body>
-        </html>
-      `;
-
       const mailOptions = {
         from: this.configService.get('EMAIL_FROM', '"Phishing Simulator" <noreply@example.com>'),
         to: options.to,
         subject: options.subject,
-        html: htmlTemplate,
+        html: options.html,
       };
 
       const info = await this.transporter.sendMail(mailOptions);

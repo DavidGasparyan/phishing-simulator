@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import { PhishingAttempt } from '../models/phishing-attempt.model';
 import apiClient from './api-client';
+import AuthService from './auth.service';
 
 // API endpoints
 const MANAGEMENT_API = '/management/phishing-attempts';
@@ -19,6 +20,7 @@ interface PhishingAttemptsResponse {
 interface SendPhishingEmailDto {
   recipientEmail: string;
   emailTemplate: string;
+  createdBy: string;
 }
 
 // API functions
@@ -35,6 +37,12 @@ const phishingApiService = {
 
   sendPhishingEmail: async (emailData: SendPhishingEmailDto): Promise<PhishingAttempt> => {
     try {
+      // Get the current user and add their ID to the request
+      const currentUser = AuthService.getCurrentUser();
+      if (currentUser && currentUser.id) {
+        emailData.createdBy = currentUser.id;
+      }
+
       console.log('Sending phishing email with data:', emailData);
       const { data } = await apiClient.post<PhishingAttempt>(`${SIMULATION_API}/send`, emailData);
       return data;
@@ -50,7 +58,8 @@ export const usePhishingAttempts = (options = {}) => {
   return useQuery<PhishingAttemptsResponse>({
     queryKey: ['phishingAttempts'],
     queryFn: phishingApiService.getAll,
-    ...options
+    ...options,
+    enabled: AuthService.isAuthenticated() // Only fetch if user is authenticated
   });
 };
 
@@ -59,8 +68,23 @@ export const useSendPhishingEmail = () => {
 
   return useMutation({
     mutationFn: phishingApiService.sendPhishingEmail,
-    onSuccess: () => {
+    onSuccess: (newAttempt) => {
+      // Invalidate and refetch phishing attempts
       queryClient.invalidateQueries({ queryKey: ['phishingAttempts'] });
+
+      // Optionally, update the cache with the new attempt
+      queryClient.setQueryData(['phishingAttempts'], (oldData: PhishingAttemptsResponse | undefined) => {
+        if (oldData) {
+          return {
+            ...oldData,
+            attempts: [newAttempt, ...oldData.attempts],
+            total: oldData.total + 1
+          };
+        }
+        return { attempts: [newAttempt], total: 1, page: 1, totalPages: 1 };
+      });
+
+      toast.success('Phishing email sent successfully');
     },
     onError: (error: any) => {
       console.error('Error response:', error.response?.data);
@@ -79,3 +103,5 @@ export const useSendPhishingEmail = () => {
     }
   });
 };
+
+export default phishingApiService;
